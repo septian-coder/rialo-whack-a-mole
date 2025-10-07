@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-a-mole rialo version</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d5 100%);
+            background-image: url('https://cdn.prod.website-files.com/6883572e6ebf68cfe676dd65/6883572e6ebf68cfe676ddd8_Background%20Image.svg');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            position: relative; /* Untuk posisi logo fixed */
+        }
+        #rialo-logo {
+            position: fixed;
+            top: 25px;
+            left: 25px;
+            width: 150px;
+            height: auto;
+            z-index: 999;
+            opacity: 0.8;
+            transition: opacity 0.3s ease;
+        }
+        #rialo-logo:hover {
+            opacity: 1;
+        }
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d5 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 300;
+            transition: opacity 0.5s ease;
+        }
+        #intro-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #game-container {
+            position: relative;
+            width: 950px; /* Board lebar */
+            height: 600px;
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d5 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        #game-container.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        #game-container:hover {
+            transform: scale(1.01);
+        }
+        /* Efek Elektrik: Overlay lightning */
+        .lightning {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f5dc 0%, #e8e8d5 100%);
+            background-position: center center;
+            background-size: cover;
+            filter: brightness(3);
+            z-index: -1;
+            opacity: 0;
+            animation: flash 8s infinite;
+            animation-delay: 3s;
+        }
+        @keyframes flash {
+            from { opacity: 0; }
+            92% { opacity: 0; }
+            93% { opacity: 0.6; }
+            94% { opacity: 0.2; }
+            96% { opacity: 0.9; }
+            to { opacity: 0; }
+        }
+        .hole {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle at 30% 30%, #333 0%, #000 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.5), 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+        .hole::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(145deg, #f5f5dc, #e8e8d5);
+            border-radius: 50%;
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5);
+        }
+        .mole {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            transform: translate(-50%, -50%) scale(0);
+            display: none;
+            cursor: pointer;
+            background-size: cover;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .mole.visible {
+            display: block;
+            transform: translate(-50%, -50%) scale(1);
+            animation: popUp 0.6s ease-out;
+        }
+        .mole:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+        }
+        @keyframes popUp {
+            0% { transform: translate(-50%, -50%) scale(0) rotate(0deg); }
+            50% { transform: translate(-50%, -50%) scale(1.2) rotate(5deg); }
+            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        }
+        #hammer {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            display: none;
+            pointer-events: none;
+            transform: rotate(45deg) scale(0);
+            z-index: 100;
+            transition: all 0.5s ease;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+        }
+        #hammer::after {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 50px;
+            height: 30px;
+            background-image: url('https://mma.prnewswire.com/media/2743626/Rialo_logo.jpg?p=publish');
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+        #hammer.active {
+            display: block;
+            transform: rotate(0deg) scale(1);
+            animation: whack 0.5s ease-in-out;
+        }
+        @keyframes whack {
+            0% { transform: rotate(45deg) scale(0.8); }
+            50% { transform: rotate(0deg) scale(1.2); filter: brightness(1.2); }
+            100% { transform: rotate(45deg) scale(0.8); }
+        }
+        .ui-element {
+            position: absolute;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        #username {
+            top: 20px;
+            left: 20px;
+        }
+        #level {
+            top: 70px; /* Di bawah username */
+            left: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        #score {
+            top: 20px;
+            left: 450px; /* Tengah atas */
+        }
+        #time {
+            top: 20px;
+            right: 200px; /* Kanan atas */
+        }
+        #reset-btn {
+            top: 20px;
+            right: 20px;
+            /* Efek Kaca (Glassmorphism) */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #000; /* Warna font hitam */
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        #reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+            color: #000; /* Tetap hitam saat hover */
+        }
+        .ui-element:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+        .level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            z-index: 200;
+            display: none;
+            animation: pulse 1s ease-in-out;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        .intro-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .intro-input {
+            padding: 15px 20px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            width: 300px;
+            margin-bottom: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .intro-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .start-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            /* Efek Kaca (Glassmorphism) */
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #000; /* Warna font hitam */
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+            color: #000; /* Tetap hitam saat hover */
+        }
+        @media (max-width: 1000px) {
+            #game-container {
+                width: 95vw;
+                height: 80vh;
+            }
+            #score { left: 350px; }
+            #time { right: 150px; }
+            #level { top: 80px; } /* Sedikit adjust untuk mobile */
+            .intro-input { width: 250px; }
+        }
+    </style>
+</head>
+<body>
+    <img id="rialo-logo" src="https://mma.prnewswire.com/media/2743626/Rialo_logo.jpg?p=publish" alt="Rialo Logo">
+    <div id="intro-screen">
+        <div class="intro-title">Welcome to Whack-a-mole Rialo Version</div>
+        <input type="text" id="player-input" class="intro-input" placeholder="Enter your name...">
+        <button id="start-btn" class="start-btn">Start Game</button>
+    </div>
+    <div id="game-container">
+        <div class="lightning"></div> <!-- Efek elektrik overlay -->
+        <div id="username" class="ui-element">Player: Loading...</div>
+        <div id="level" class="ui-element">Level: 1</div>
+        <div id="score" class="ui-element">Score: 0</div>
+        <div id="time" class="ui-element">Time: 30</div>
+        <button id="reset-btn" class="ui-element">Reset Game</button>
+        <div id="level-up" class="level-up">Level Up! ⚡</div>
+        <div id="hammer"></div>
+    </div>
+
+    <script>
+        const introScreen = document.getElementById('intro-screen');
+        const gameContainer = document.getElementById('game-container');
+        const playerInput = document.getElementById('player-input');
+        const startBtn = document.getElementById('start-btn');
+        const usernameDisplay = document.getElementById('username');
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const timeDisplay = document.getElementById('time');
+        const resetBtn = document.getElementById('reset-btn');
+        const hammer = document.getElementById('hammer');
+        const levelUpMsg = document.getElementById('level-up');
+
+        // Efek Suara (dari Mixkit - bebas royalti)
+        const startSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-video-game-start-2055.mp3');
+        const whackSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-hammer-hit-1932.mp3');
+        const levelUpSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-video-game-level-up-2056.mp3');
+        const gameOverSound = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-arcade-retro-game-over-213.mp3'); // Suara game over baru
+
+        // Posisi lubang (holes) disesuaikan untuk board lebih lebar
+        const holesPositions = [
+            {x: 200, y: 200}, {x: 475, y: 200}, {x: 750, y: 200},
+            {x: 200, y: 400}, {x: 475, y: 400}, {x: 750, y: 400}
+        ];
+
+        // Buat elemen lubang
+        holesPositions.forEach(pos => {
+            const hole = document.createElement('div');
+            hole.classList.add('hole');
+            hole.style.left = `${pos.x}px`;
+            hole.style.top = `${pos.y + 20}px`;
+            gameContainer.appendChild(hole);
+        });
+
+        // Buat mole (target)
+        const moles = holesPositions.map(pos => {
+            const mole = document.createElement('div');
+            mole.classList.add('mole');
+            mole.style.left = `${pos.x}px`;
+            mole.style.top = `${pos.y}px`;
+            mole.style.backgroundImage = `url('https://mp-cdn.elgato.com/media/c322a2db-bcdb-4531-ac6c-28ec05a3372d/b88ed8da-837a-453d-9939-dd5d58ad18aa/Whack-A-Mole-app-icon-optimized-c0775610-7dcc-45e6-b9a9-e93c917329a9.png')`;
+            gameContainer.appendChild(mole);
+            return {element: mole, x: pos.x, y: pos.y, visible: false, popTime: 0};
+        });
+
+        let score = 0;
+        let level = 1;
+        let timeLeft = 30;
+        let username = '';
+        let gameInterval;
+        let timerInterval;
+        let baseSpawnRate = 0.1; // Base probabilitas spawn
+
+        // Event start button
+        startBtn.addEventListener('click', () => {
+            username = playerInput.value.trim() || 'Player';
+            usernameDisplay.innerText = `Player: ${username}`;
+            introScreen.classList.add('hidden');
+            gameContainer.classList.add('visible');
+            startSound.play().catch(e => console.log('Audio play failed:', e)); // Play suara start
+            startGame(); // Mulai game setelah set nama
+        });
+
+        // Fungsi hitung spawn rate berdasarkan level
+        function getSpawnRate() {
+            return baseSpawnRate + (level - 1) * 0.05; // Naik 0.05 per level, max ~0.3 di level 5
+        }
+
+        // Fungsi tampilkan level up message + suara
+        function showLevelUp() {
+            levelUpSound.play().catch(e => console.log('Audio play failed:', e)); // Play suara level up
+            levelUpMsg.style.display = 'block';
+            setTimeout(() => {
+                levelUpMsg.style.display = 'none';
+            }, 2000);
+        }
+
+        // Fungsi tampilkan mole acak
+        function showRandomMole() {
+            const hiddenMoles = moles.filter(m => !m.visible);
+            if (hiddenMoles.length > 0) {
+                const randomMole = hiddenMoles[Math.floor(Math.random() * hiddenMoles.length)];
+                randomMole.visible = true;
+                randomMole.popTime = Date.now();
+                randomMole.element.style.display = 'block';
+                randomMole.element.classList.add('visible');
+                setTimeout(() => {
+                    randomMole.element.classList.remove('visible');
+                }, 600);
+            }
+        }
+
+        // Fungsi update game
+        function update() {
+            const now = Date.now();
+            moles.forEach(mole => {
+                if (mole.visible && (now - mole.popTime > 1000)) {
+                    mole.visible = false;
+                    mole.element.style.display = 'none';
+                }
+            });
+
+            if (Math.random() < getSpawnRate()) {
+                showRandomMole();
+            }
+        }
+
+        // Event klik untuk whack + suara
+        gameContainer.addEventListener('click', (e) => {
+            const target = e.target;
+            if (target.classList.contains('mole')) {
+                const mole = moles.find(m => m.element === target);
+                if (mole && mole.visible) {
+                    whackSound.play().catch(e => console.log('Audio play failed:', e)); // Play suara whack
+                    mole.visible = false;
+                    mole.element.style.display = 'none';
+                    score++;
+                    scoreDisplay.innerText = `Score: ${score}`;
+
+                    // Trigger efek elektrik lebih kuat (restart animasi)
+                    document.querySelector('.lightning').style.animation = 'none';
+                    setTimeout(() => {
+                        document.querySelector('.lightning').style.animation = 'flash 0.5s ease-in-out';
+                    }, 10);
+                    setTimeout(() => {
+                        document.querySelector('.lightning').style.animation = 'flash 8s infinite';
+                    }, 500);
+
+                    // Tampilkan animasi palu
+                    hammer.style.left = `${mole.x - 40}px`;
+                    hammer.style.top = `${mole.y - 40}px`;
+                    hammer.classList.add('active');
+                    setTimeout(() => {
+                        hammer.classList.remove('active');
+                    }, 500);
+
+                    // Check level up
+                    const newLevel = Math.floor(score / 10) + 1;
+                    if (newLevel > level && newLevel <= 5) { // Max level 5
+                        level = newLevel;
+                        levelDisplay.innerText = `Level: ${level}`;
+                        showLevelUp();
+                        baseSpawnRate = Math.min(0.3, baseSpawnRate + 0.05); // Tingkatkan kesulitan
+                    }
+                }
+            }
+        });
+
+        // Event reset button (restart game, tapi nama tetap) + suara
+        resetBtn.addEventListener('click', () => {
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            score = 0;
+            level = 1;
+            baseSpawnRate = 0.1;
+            timeLeft = 30;
+            scoreDisplay.innerText = `Score: ${score}`;
+            levelDisplay.innerText = `Level: ${level}`;
+            timeDisplay.innerText = `Time: ${timeLeft}`;
+            startSound.play().catch(e => console.log('Audio play failed:', e)); // Play suara start
+            startGame(); // Restart timer dan spawn
+        });
+
+        // Mulai game (dipanggil setelah start button)
+        function startGame() {
+            gameInterval = setInterval(update, 100);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timeDisplay.innerText = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(gameInterval);
+                    clearInterval(timerInterval);
+                    gameOverSound.play().catch(e => console.log('Audio play failed:', e)); // Play suara game over
+                    setTimeout(() => { // Delay alert sedikit agar suara selesai
+                        alert(`Game Over, ${username}! Skor akhir: ${score} (Level ${level})`);
+                    }, 1000);
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
